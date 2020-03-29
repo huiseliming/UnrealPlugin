@@ -7,14 +7,14 @@
 #include "Engine.h"
 
 template<typename T>
-void SetParams(TFieldIterator<UProperty>& Iterator, void* PramsBuffer, T t)
+void SetParams(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t)
 {
 	while (Iterator)
 	{
 		UProperty* Property = *Iterator;
 		if (Property->GetFName().ToString().StartsWith("__"))//ignore private param like __WolrdContext of function in blueprint funcion library
 			continue;
-		void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(PramsBuffer);
+		void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(ParamsBuffer);
 		if (!(Property->PropertyFlags & CPF_ReturnParm) && (Property->PropertyFlags & CPF_Parm))
 		{
 			//调用构造函数
@@ -26,34 +26,34 @@ void SetParams(TFieldIterator<UProperty>& Iterator, void* PramsBuffer, T t)
 }
 
 template<typename T, typename... TArgs>
-void SetParams(TFieldIterator<UProperty>& Iterator, void* PramsBuffer, T t, TArgs... Args)
+void SetParams(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t, TArgs... Args)
 {
 	while (Iterator)
 	{
 		UProperty* Property = *Iterator;
 		if (Property->GetFName().ToString().StartsWith("__"))//ignore private param like __WolrdContext of function in blueprint funcion library
 			continue;
-		void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(PramsBuffer);
+		void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(ParamsBuffer);
 		if (!(Property->PropertyFlags & CPF_ReturnParm) && (Property->PropertyFlags & CPF_Parm))
 		{
 			//调用构造函数
 			new(PropertyBuffer) T(t);
 			++Iterator;
-			return SetParams(Iterator, PramsBuffer, Args...);
+			return SetParams(Iterator, ParamsBuffer, Args...);
 		}
 		++Iterator;
 	}
 }
 
 template<typename T>
-void FreeMemory(TFieldIterator<UProperty>& Iterator, void* PramsBuffer, T t)
+void FreeMemory(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t)
 {
 	while (Iterator)
 	{
 		UProperty* Property = *Iterator;
 		if (Property->GetFName().ToString().StartsWith("__"))//ignore private param like __WolrdContext of function in blueprint funcion library
 			continue;
-		void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(PramsBuffer);
+		void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(ParamsBuffer);
 		if (!(Property->PropertyFlags & CPF_ReturnParm) && (Property->PropertyFlags & CPF_Parm))
 		{
 			//调用析构函数
@@ -66,20 +66,20 @@ void FreeMemory(TFieldIterator<UProperty>& Iterator, void* PramsBuffer, T t)
 }
 
 template<typename T, typename... TArgs>
-void FreeMemory(TFieldIterator<UProperty>& Iterator, void* PramsBuffer, T t, TArgs... Args)
+void FreeMemory(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t, TArgs... Args)
 {
 	while (Iterator)
 	{
 		UProperty* Property = *Iterator;
 		if (Property->GetFName().ToString().StartsWith("__"))//ignore private param like __WolrdContext of function in blueprint funcion library
 			continue;
-		void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(PramsBuffer);
+		void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(ParamsBuffer);
 		if (!(Property->PropertyFlags & CPF_ReturnParm) && (Property->PropertyFlags & CPF_Parm))
 		{
 			//调用析构函数
 			((T*)PropertyBuffer)->~T();
 			++Iterator;
-			return FreeMemory(Iterator, PramsBuffer, Args...);
+			return FreeMemory(Iterator, ParamsBuffer, Args...);
 		}
 		++Iterator;
 	}
@@ -89,18 +89,18 @@ template<typename TReturn, typename... TArgs>
 void UDaiMingzeLibraryUtilities::ProcessFunction(UObject* Object, UFunction* Function, TReturn& Return, TArgs... Args)
 {
 	//申请内存对齐的内存放置参数
-	void* PramsBuffer = (uint8*)FMemory_Alloca(Function->ParmsSize);
+	void* ParamsBuffer = (uint8*)FMemory_Alloca(Function->ParmsSize);
 	{
 		//填充参数 使用placement new
 		TFieldIterator<UProperty> Iterator(Function);
-		SetParams(Iterator, PramsBuffer, Args...);
+		SetParams(Iterator, ParamsBuffer, Args...);
 	}
 	//执行函数
-	Object->ProcessEvent(Function, PramsBuffer);   //call function
+	Object->ProcessEvent(Function, ParamsBuffer);   //call function
 	{
 		//由于是placement new 使用调用析构函数防止内存泄漏 
 		TFieldIterator<UProperty> Iterator(Function);
-		FreeMemory(Iterator, PramsBuffer, Args...);
+		FreeMemory(Iterator, ParamsBuffer, Args...);
 	}
 	//读取返回值
 	for (TFieldIterator<UProperty> Iterator(Function); Iterator; ++Iterator)
@@ -108,7 +108,7 @@ void UDaiMingzeLibraryUtilities::ProcessFunction(UObject* Object, UFunction* Fun
 		UProperty* Property = *Iterator;
 		if (Property->PropertyFlags & CPF_ReturnParm)
 		{
-			void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(PramsBuffer);
+			void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(ParamsBuffer);
 			Return = *(TReturn*)PropertyBuffer;
 		}
 	}
@@ -118,18 +118,18 @@ template<typename TReturn, typename... TArgs>
 void UDaiMingzeLibraryUtilities::ProcessFunction(UClass* Class, UFunction* Function, TReturn& Return, TArgs... Args)
 {
 	//申请内存对齐的内存放置参数
-	void* PramsBuffer = (uint8*)FMemory_Alloca(Function->ParmsSize);
+	void* ParamsBuffer = (uint8*)FMemory_Alloca(Function->ParmsSize);
 	{
 		//填充参数 使用placement new
 		TFieldIterator<UProperty> Iterator(Function);
-		SetParams(Iterator, PramsBuffer, Args...);
+		SetParams(Iterator, ParamsBuffer, Args...);
 	}
 	//执行函数
-	Class->ProcessEvent(Function, PramsBuffer);   //call function
+	Class->ProcessEvent(Function, ParamsBuffer);   //call function
 	{
 		//由于是placement new 使用调用析构函数防止内存泄漏 
 		TFieldIterator<UProperty> Iterator(Function);
-		FreeMemory(Iterator, PramsBuffer, Args...);
+		FreeMemory(Iterator, ParamsBuffer, Args...);
 	}
 	//读取返回值
 	for (TFieldIterator<UProperty> Iterator(Function); Iterator; ++Iterator)
@@ -137,7 +137,7 @@ void UDaiMingzeLibraryUtilities::ProcessFunction(UClass* Class, UFunction* Funct
 		UProperty* Property = *Iterator;
 		if (Property->PropertyFlags & CPF_ReturnParm)
 		{
-			void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(PramsBuffer);
+			void* PropertyBuffer = Property->ContainerPtrToValuePtr<void*>(ParamsBuffer);
 			Return = *(TReturn*)PropertyBuffer;
 		}
 	}
