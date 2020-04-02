@@ -1,4 +1,4 @@
-// Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
+﻿// Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 
@@ -44,6 +44,8 @@ public class DaiMingzePlugin : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+                "ImageWrapper",
+                "RenderCore"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
