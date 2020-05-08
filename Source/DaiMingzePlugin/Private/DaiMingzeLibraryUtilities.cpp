@@ -189,10 +189,10 @@ void UDaiMingzeLibraryUtilities::GetFunctionByName(UObject* InObject, UFunction*
 	{
 		UFunction * Function = *FuncIt;
 		FString FunctionName = Function->GetName();
-		if (FunctionName.Find("X") == 0)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, FunctionName);
-		}
+		//if (FunctionName.Find("X") == 0)
+		//{
+		//	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, FunctionName);
+		//}
 		if (!Function->GetName().Compare(FuncName))
 		{
 			OutFunction = Function;
@@ -241,9 +241,7 @@ void UDaiMingzeLibraryUtilities::testcallfunc(UObject* InObject, FString FuncNam
 	strarr.Add(inx);
 	strarr.Add(inx);
 	strarr.Add(inx);
-	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, DescriptionFunction(OutFunction));
 	ProcessFunction(InObject, OutFunction, outParams, num, strarr);
 	//InvokeFunction(InObject->GetClass(), InObject, OutFunction, outParams, num, inx);
-	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, FString::Printf(TEXT(" %d"), outParams));
 }
 
