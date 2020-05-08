@@ -7,7 +7,7 @@
 #include "Engine.h"
 
 template<typename T>
-void SetParams(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t)
+void SetParams(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T&& t)
 {
 	while (Iterator)
 	{
@@ -18,7 +18,7 @@ void SetParams(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t)
 		if (!(Property->PropertyFlags & CPF_ReturnParm) && (Property->PropertyFlags & CPF_Parm))
 		{
 			//调用构造函数
-			new(PropertyBuffer) T(t);
+			new(PropertyBuffer) std::remove_reference<T>::type(t);
 			break;
 		}
 		++Iterator;
@@ -26,7 +26,7 @@ void SetParams(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t)
 }
 
 template<typename T, typename... TArgs>
-void SetParams(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t, TArgs... Args)
+void SetParams(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T&& t, TArgs&& ...Args)
 {
 	while (Iterator)
 	{
@@ -37,17 +37,18 @@ void SetParams(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t, TAr
 		if (!(Property->PropertyFlags & CPF_ReturnParm) && (Property->PropertyFlags & CPF_Parm))
 		{
 			//调用构造函数
-			new(PropertyBuffer) T(t);
+			new(PropertyBuffer) std::remove_reference<T>::type(t);
 			++Iterator;
-			return SetParams(Iterator, ParamsBuffer, Args...);
+			return SetParams(Iterator, ParamsBuffer, Forward<TArgs>(Args)...);
 		}
 		++Iterator;
 	}
 }
 
 template<typename T>
-void FreeMemory(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t)
+void FreeMemory(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T&& t)
 {
+	using RemoveRefT = typename std::remove_reference<T>::type;
 	while (Iterator)
 	{
 		UProperty* Property = *Iterator;
@@ -57,7 +58,7 @@ void FreeMemory(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t)
 		if (!(Property->PropertyFlags & CPF_ReturnParm) && (Property->PropertyFlags & CPF_Parm))
 		{
 			//调用析构函数
-			((T*)PropertyBuffer)->~T();
+			((RemoveRefT*)PropertyBuffer)->~RemoveRefT();
 			++Iterator;
 			break;
 		}
@@ -66,8 +67,9 @@ void FreeMemory(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t)
 }
 
 template<typename T, typename... TArgs>
-void FreeMemory(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t, TArgs... Args)
+void FreeMemory(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T&& t, TArgs&& ...Args)
 {
+	using RemoveRefT = typename std::remove_reference<T>::type;
 	while (Iterator)
 	{
 		UProperty* Property = *Iterator;
@@ -77,30 +79,30 @@ void FreeMemory(TFieldIterator<UProperty>& Iterator, void* ParamsBuffer, T t, TA
 		if (!(Property->PropertyFlags & CPF_ReturnParm) && (Property->PropertyFlags & CPF_Parm))
 		{
 			//调用析构函数
-			((T*)PropertyBuffer)->~T();
+			((RemoveRefT*)PropertyBuffer)->~RemoveRefT();
 			++Iterator;
-			return FreeMemory(Iterator, ParamsBuffer, Args...);
+			return FreeMemory(Iterator, ParamsBuffer, Forward<TArgs>(Args)...);
 		}
 		++Iterator;
 	}
 }
 
 template<typename TReturn, typename... TArgs>
-void UDaiMingzeLibraryUtilities::ProcessFunction(UObject* Object, UFunction* Function, TReturn& Return, TArgs... Args)
+void UDaiMingzeLibraryUtilities::ProcessFunction(UObject* Object, UFunction* Function, TReturn& Return, TArgs&& ...Args)
 {
 	//申请内存对齐的内存放置参数
 	void* ParamsBuffer = (uint8*)FMemory_Alloca(Function->ParmsSize);
 	{
 		//填充参数 使用placement new
 		TFieldIterator<UProperty> Iterator(Function);
-		SetParams(Iterator, ParamsBuffer, Args...);
+		SetParams(Iterator, ParamsBuffer, Forward<TArgs>(Args)...);
 	}
 	//执行函数
 	Object->ProcessEvent(Function, ParamsBuffer);   //call function
 	{
 		//由于是placement new 使用调用析构函数防止内存泄漏 
 		TFieldIterator<UProperty> Iterator(Function);
-		FreeMemory(Iterator, ParamsBuffer, Args...);
+		FreeMemory(Iterator, ParamsBuffer, Forward<TArgs>(Args)...);
 	}
 	//读取返回值
 	for (TFieldIterator<UProperty> Iterator(Function); Iterator; ++Iterator)
@@ -115,21 +117,21 @@ void UDaiMingzeLibraryUtilities::ProcessFunction(UObject* Object, UFunction* Fun
 }
 
 template<typename TReturn, typename... TArgs>
-void UDaiMingzeLibraryUtilities::ProcessFunction(UClass* Class, UFunction* Function, TReturn& Return, TArgs... Args)
+void UDaiMingzeLibraryUtilities::ProcessFunction(UClass* Class, UFunction* Function, TReturn& Return, TArgs&& ...Args)
 {
 	//申请内存对齐的内存放置参数
 	void* ParamsBuffer = (uint8*)FMemory_Alloca(Function->ParmsSize);
 	{
 		//填充参数 使用placement new
 		TFieldIterator<UProperty> Iterator(Function);
-		SetParams(Iterator, ParamsBuffer, Args...);
+		SetParams(Iterator, ParamsBuffer,  Forward<TArgs>(Args)...);
 	}
 	//执行函数
 	Class->ProcessEvent(Function, ParamsBuffer);   //call function
 	{
 		//由于是placement new 使用调用析构函数防止内存泄漏 
 		TFieldIterator<UProperty> Iterator(Function);
-		FreeMemory(Iterator, ParamsBuffer, Args...);
+		FreeMemory(Iterator, ParamsBuffer, Forward<TArgs>(Args)...);
 	}
 	//读取返回值
 	for (TFieldIterator<UProperty> Iterator(Function); Iterator; ++Iterator)

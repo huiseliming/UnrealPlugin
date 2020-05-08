@@ -17,10 +17,10 @@ class DAIMINGZEPLUGIN_API UDaiMingzeLibraryUtilities : public UBlueprintFunction
 	/* Utilities BEGIN */
 
 	template<typename TReturn, typename... TArgs>
-	static void ProcessFunction(UObject* Object, UFunction* Function, TReturn& Return, TArgs... Args);
+	static void ProcessFunction(UObject* Object, UFunction* Function, TReturn& Return, TArgs&&...Args);
 
 	template<typename TReturn, typename... TArgs>
-	static void ProcessFunction(UClass* Class, UFunction* Function, TReturn& Return, TArgs... Args);
+	static void ProcessFunction(UClass* Class, UFunction* Function, TReturn& Return, TArgs&& ...Args);
 
 	UFUNCTION(BlueprintPure, Category = "DaiMingze|Utilitie::BlueprintLibrary")
 	static FString DescriptionFunction(UFunction* Function);
